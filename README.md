@@ -5,17 +5,17 @@ iOS movie app pulling genres, movie lists, details, trailers, and reviews from T
 ## Why It's Like This
 
 * **No Storyboard:** Everything is laid out in code with `NSLayoutConstraint`. Easier to read, easier to debug, nothing hidden in XML.
-* **Tests that don't crash:** `GenreUnitTests`, `MovieListUnitTests`, and `MovieDetailUnitTests` all run on mock interactors. Async callbacks are handled properly with `XCTestExpectation` so nothing weird out.
+* **Tests that don't crash:** `GenreUnitTests`, `MovieListUnitTests`, and `MovieDetailUnitTests` all run on mock interactors. Async callbacks are handled properly with `XCTestExpectation` so nothing behaves weirdly.
 
-## Where Everything Lives
+## Where Everything Happened
 
 ```
 PilotEpisode/
-├── Genre/          # Genre list VIPER stack
-├── MovieList/      # Movies by genre VIPER stack
-├── MovieDetail/    # Movie details, trailer, and reviews VIPER stack
-├── Services/       # TMDB API calls
-├── Config.plist    # Drop your TMDB API key here
+├── Genre/
+├── MovieList/
+├── MovieDetail/
+├── Services/
+├── Config.plist
 └── PilotEpisodeTests/
     ├── GenreUnitTests.swift
     ├── MovieListUnitTests.swift
