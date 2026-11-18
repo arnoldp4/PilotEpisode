@@ -11,11 +11,11 @@ iOS movie app pulling genres, movie lists, details, trailers, and reviews from T
 
 ```
 PilotEpisode/
-├── Genre/
-├── MovieList/
-├── MovieDetail/
+├── Modules/
+├──├── Genres
+├──├── MovieList/
+├──├── MovieDetail/
 ├── Services/
-├── Config.plist
 └── PilotEpisodeTests/
     ├── GenreUnitTests.swift
     ├── MovieListUnitTests.swift
@@ -24,12 +24,12 @@ PilotEpisode/
 ```
 
 ## Running It
-1. Open PilotEpisode/PilotEpisode.xcodeproj in Xcode.
-2. Put your TMDB API credentials inside PilotEpisode/Config.plist.
-3. Run on a simulator (Cmd + R).
-4. Run the tests (Cmd + U).
+1. Open `PilotEpisode/PilotEpisode.xcodeproj` in Xcode.
+2. Rename your credentials template to `Config.plist` and add your TMDB API token.
+3. Run on a simulator (`Cmd + R`).
+4. Run the tests (`Cmd + U`).
 
 ## If I Had More Time
-- Put TMDBService behind a protocol so it can be mocked straight into the real Interactors instead of mocking at the Interactor level.
 - Add CoreData caching so it handles offline states and pagination smoother.
-- Write UI tests for the navigation flow.
+- Write UI tests for the main navigation flow.
+- Add pull-to-refresh and empty/error state illustrations across all modules.
