@@ -1,16 +1,16 @@
 import UIKit
 
-protocol GenreListRouterSpecs {
+protocol GenreListRouterSpecs: AnyObject {
     func navigateToMovieList(genre: GenreEntity)
 }
 
 final class GenreListRouter: GenreListRouterSpecs {
-    weak var viewController: UIViewController?
+    private weak var viewController: UIViewController?
     
-    static func createModule() -> UIViewController {
-        let view = GenreListVC()
+    static func createModule(tmdbService: TMDBServiceProtocol = TMDBService()) -> UIViewController {
+        let view = GenreListViewController()
         let presenter = GenreListPresenter()
-        let interactor = GenreListInteractor()
+        let interactor = GenreListInteractor(tmdbService: tmdbService)
         let router = GenreListRouter()
         
         view.presenter = presenter

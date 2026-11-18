@@ -1,16 +1,16 @@
 import UIKit
 
-protocol MovieListRouterSpecs {
+protocol MovieListRouterSpecs: AnyObject {
     func navigateToMovieDetail(movieId: Int)
 }
 
-class MovieListRouter: MovieListRouterSpecs {
-    weak var viewController: UIViewController?
+final class MovieListRouter: MovieListRouterSpecs {
+    private weak var viewController: UIViewController?
     
-    static func createModule(genreId: Int) -> UIViewController {
-        let view = MovieListVC()
+    static func createModule(genreId: Int, tmdbService: TMDBServiceProtocol = TMDBService()) -> UIViewController {
+        let view = MovieListViewController()
         let presenter = MovieListPresenter(genreId: genreId)
-        let interactor = MovieListInteractor()
+        let interactor = MovieListInteractor(tmdbService: tmdbService)
         let router = MovieListRouter()
         
         view.presenter = presenter

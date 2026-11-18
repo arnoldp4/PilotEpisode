@@ -5,13 +5,13 @@ protocol GenreListViewSpecs: AnyObject {
     func showError(_ message: String)
 }
 
-final class GenreListVC: UIViewController, GenreListViewSpecs {
+final class GenreListViewController: UIViewController {
     
     var presenter: GenreListPresenterSpecs?
     
-    // MARK: - UI Components
+    // MARK: - Private UI Components
     
-    lazy var tableView: UITableView = {
+    private lazy var tableView: UITableView = {
         let tableView = UITableView()
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.dataSource = self
@@ -27,9 +27,10 @@ final class GenreListVC: UIViewController, GenreListViewSpecs {
         setupView()
         presenter?.viewIsReady()
     }
-    
-    // MARK: - Setup
-    
+}
+
+// MARK: - Setup Views
+extension GenreListViewController {
     private func setupView() {
         title = "Movie Genres"
         view.backgroundColor = .systemBackground
@@ -42,7 +43,10 @@ final class GenreListVC: UIViewController, GenreListViewSpecs {
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
-    
+}
+
+// MARK: - GenreListViewSpecs Conformance
+extension GenreListViewController: GenreListViewSpecs {
     func reloadData() {
         DispatchQueue.main.async {
             self.tableView.reloadData()
@@ -57,10 +61,9 @@ final class GenreListVC: UIViewController, GenreListViewSpecs {
 }
 
 // MARK: - UITableViewDataSource & Delegate
-
-extension GenreListVC: UITableViewDataSource, UITableViewDelegate {
+extension GenreListViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        presenter?.genresCount ?? 0
+        return presenter?.genresCount ?? 0
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {

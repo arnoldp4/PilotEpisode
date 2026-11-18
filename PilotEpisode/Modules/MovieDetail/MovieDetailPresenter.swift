@@ -1,11 +1,12 @@
-import UIKit
+import Foundation
 
-protocol MovieDetailPresenterSpecs {
+protocol MovieDetailPresenterSpecs: AnyObject {
     func viewIsReady()
     func didTapTrailer()
+    func didScrollReviewsToBottom()
 }
 
-class MovieDetailPresenter: MovieDetailPresenterSpecs, MovieDetailInteractorOutputSpecs {
+final class MovieDetailPresenter {
     weak var view: MovieDetailViewSpecs?
     var interactor: MovieDetailInteractorInputSpecs?
     var router: MovieDetailRouterSpecs?
@@ -15,11 +16,21 @@ class MovieDetailPresenter: MovieDetailPresenterSpecs, MovieDetailInteractorOutp
     private var currentReviewPage = 1
     private var totalReviewPages = 1
     private var isLoadingReviews = false
+    private var currentTrailerKey: String?
     
     init(movieId: Int) {
         self.movieId = movieId
     }
     
+    private func loadMoreReviews() {
+        guard !isLoadingReviews, currentReviewPage <= totalReviewPages else { return }
+        isLoadingReviews = true
+        interactor?.fetchReviews(id: movieId, page: currentReviewPage)
+    }
+}
+
+// MARK: - MovieDetailPresenterSpecs Conformance
+extension MovieDetailPresenter: MovieDetailPresenterSpecs {
     func viewIsReady() {
         interactor?.fetchMovieDetails(id: movieId)
         interactor?.fetchVideos(id: movieId)
@@ -27,37 +38,32 @@ class MovieDetailPresenter: MovieDetailPresenterSpecs, MovieDetailInteractorOutp
     }
     
     func didTapTrailer() {
-        // Trigger router navigation
+        guard let key = currentTrailerKey, let url = URL(string: "https://www.youtube.com/watch?v=\(key)") else { return }
+        router?.navigateToTrailer(url: url)
     }
     
     func didScrollReviewsToBottom() {
-        guard !isLoadingReviews, currentReviewPage <= totalReviewPages else { return }
         loadMoreReviews()
     }
+}
 
-    private func loadMoreReviews() {
-        isLoadingReviews = true
-        interactor?.fetchReviews(id: movieId, page: currentReviewPage)
+// MARK: - MovieDetailInteractorOutputSpecs Conformance
+extension MovieDetailPresenter: MovieDetailInteractorOutputSpecs {
+    func didFetchMovie(_ movie: MovieDetailEntity) {
+        view?.displayMovie(title: movie.title, overview: movie.overview)
     }
-
-    // Add to Interactor Output conformance:
+    
+    func didFetchTrailerKey(_ key: String) {
+        self.currentTrailerKey = key
+        view?.displayTrailer(key: key)
+    }
+    
     func didFetchReviews(_ newReviews: [ReviewEntity], totalPages: Int) {
         isLoadingReviews = false
         self.totalReviewPages = totalPages
         self.reviews.append(contentsOf: newReviews)
         self.currentReviewPage += 1
         view?.displayReviews(reviews)
-    }
-
-    func didFetchTrailerKey(_ key: String) {
-        view?.displayTrailer(key: key)
-    }
-    
-    // MARK: - Interactor Outputs
-    
-    func didFetchMovie(_ movie: MovieDetailEntity) {
-        // Format or process data if needed, then tell the View to display it
-        view?.displayMovie(title: movie.title, overview: movie.overview)
     }
     
     func didFailFetching(error: Error) {

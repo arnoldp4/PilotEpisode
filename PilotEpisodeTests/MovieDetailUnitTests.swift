@@ -36,8 +36,12 @@ final class MockMovieDetailView: MovieDetailViewSpecs {
 final class MockMovieDetailInteractor: MovieDetailInteractorInputSpecs {
     weak var output: MovieDetailInteractorOutputSpecs?
     var shouldFail = false
+    var fetchDetailsCallCount = 0
+    var fetchReviewsCallCount = 0
+    var fetchVideosCallCount = 0
     
     func fetchMovieDetails(id: Int) {
+        fetchDetailsCallCount += 1
         if shouldFail {
             output?.didFailFetching(error: NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Error"]))
         } else {
@@ -46,12 +50,14 @@ final class MockMovieDetailInteractor: MovieDetailInteractorInputSpecs {
     }
     
     func fetchReviews(id: Int, page: Int) {
+        fetchReviewsCallCount += 1
         if !shouldFail {
             output?.didFetchReviews([ReviewEntity(author: "Reviewer A", content: "Awesome movie!")], totalPages: 1)
         }
     }
     
     func fetchVideos(id: Int) {
+        fetchVideosCallCount += 1
         if !shouldFail {
             output?.didFetchTrailerKey("trailer123")
         }
@@ -129,5 +135,22 @@ final class MovieDetailUnitTests: XCTestCase {
         
         // Verifies failure path handles correctly without crashing
         XCTAssertNil(mockView.displayedTitle)
+    }
+    
+    func testInit_DoesNotTriggerAnyCalls() {
+        XCTAssertEqual(mockInteractor?.fetchDetailsCallCount, 0)
+        XCTAssertEqual(mockInteractor?.fetchReviewsCallCount, 0)
+        XCTAssertEqual(mockInteractor?.fetchVideosCallCount, 0)
+    }
+
+    func testViewIsReady_TriggersExactDependencyCallsOnce() {
+        guard let mockInteractor = mockInteractor,
+              let presenter = presenter else { return }
+        
+        presenter.viewIsReady()
+        
+        XCTAssertEqual(mockInteractor.fetchDetailsCallCount, 1)
+        XCTAssertEqual(mockInteractor.fetchVideosCallCount, 1)
+        XCTAssertEqual(mockInteractor.fetchReviewsCallCount, 1, "Should fetch first page of reviews exactly once on load")
     }
 }

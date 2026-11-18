@@ -8,13 +8,13 @@ protocol MovieDetailViewSpecs: AnyObject {
     func displayReviews(_ reviews: [ReviewEntity])
 }
 
-final class MovieDetailVC: UIViewController, MovieDetailViewSpecs, WKNavigationDelegate {
+final class MovieDetailViewController: UIViewController {
     
     var presenter: MovieDetailPresenterSpecs?
     
-    // MARK: - UI Components
+    // MARK: - Private UI Components (Private Lazy Var)
     
-    lazy var titleLabel: UILabel = {
+    private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 22, weight: .bold)
         label.numberOfLines = 0
@@ -22,7 +22,7 @@ final class MovieDetailVC: UIViewController, MovieDetailViewSpecs, WKNavigationD
         return label
     }()
     
-    lazy var overviewLabel: UILabel = {
+    private lazy var overviewLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 16, weight: .regular)
         label.textColor = .secondaryLabel
@@ -31,33 +31,30 @@ final class MovieDetailVC: UIViewController, MovieDetailViewSpecs, WKNavigationD
         return label
     }()
     
-    // Clean property name: imageView instead of trailerImageView
-    lazy var webView: WKWebView = {
+    private lazy var webView: WKWebView = {
         let configuration = WKWebViewConfiguration()
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.translatesAutoresizingMaskIntoConstraints = false
-        // Trick YouTube into thinking this is regular Safari, bypassing Error 153/152
         webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
-        
         return webView
     }()
     
-    lazy var youtubeFallbackButton: UIButton = {
+    private lazy var youtubeFallbackButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Watch Trailer on YouTube", for: .normal)
         button.setTitleColor(.white, for: .normal)
         button.backgroundColor = .systemRed
         button.layer.cornerRadius = 8
-        button.isHidden = true // Hidden by default, only shows if embed fails
+        button.isHidden = true
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.addTarget(self, action: #selector(openYouTubeExternally), for: .touchUpInside)
+        button.addTarget(self, action: #selector(didTapFallbackButton), for: .touchUpInside)
         return button
     }()
 
-    lazy var reviewsTableView: UITableView = {
+    private lazy var reviewsTableView: UITableView = {
         let tableView = UITableView()
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "ReviewCell")
         tableView.rowHeight = UITableView.automaticDimension
@@ -67,7 +64,6 @@ final class MovieDetailVC: UIViewController, MovieDetailViewSpecs, WKNavigationD
     }()
 
     private var reviews: [ReviewEntity] = []
-    private var currentTrailerKey: String?
     
     // MARK: - Lifecycle
     
@@ -78,16 +74,20 @@ final class MovieDetailVC: UIViewController, MovieDetailViewSpecs, WKNavigationD
         presenter?.viewIsReady()
     }
     
-    // MARK: - Setup
-    
+    @objc private func didTapFallbackButton() {
+        presenter?.didTapTrailer()
+    }
+}
+
+// MARK: - Setup Views
+extension MovieDetailViewController {
     private func setupView() {
         view.backgroundColor = .systemBackground
         view.addSubview(titleLabel)
         view.addSubview(overviewLabel)
         view.addSubview(webView)
         view.addSubview(reviewsTableView)
-        view.addSubview(youtubeFallbackButton) // Add this
-        view.addSubview(reviewsTableView)
+        view.addSubview(youtubeFallbackButton)
             
         webView.navigationDelegate = self
         reviewsTableView.delegate = self
@@ -103,83 +103,42 @@ final class MovieDetailVC: UIViewController, MovieDetailViewSpecs, WKNavigationD
             overviewLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             overviewLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             
-            // Trailer Thumbnail Card (Zero Error 153s)
             webView.topAnchor.constraint(equalTo: overviewLabel.bottomAnchor, constant: 16),
             webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             webView.heightAnchor.constraint(equalToConstant: 200),
             
-            // Fallback button centered over the trailer area just in case
             youtubeFallbackButton.centerXAnchor.constraint(equalTo: webView.centerXAnchor),
             youtubeFallbackButton.centerYAnchor.constraint(equalTo: webView.centerYAnchor),
             youtubeFallbackButton.widthAnchor.constraint(equalToConstant: 220),
             youtubeFallbackButton.heightAnchor.constraint(equalToConstant: 44),
             
-            // Reviews TableView fills the rest
             reviewsTableView.topAnchor.constraint(equalTo: webView.bottomAnchor, constant: 8),
             reviewsTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             reviewsTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             reviewsTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
-    
-    // MARK: - Actions
-    
-    @objc private func openYouTubeTrailer() {
-        guard let key = currentTrailerKey, let url = URL(string: "https://www.youtube.com/watch?v=\(key)") else { return }
-        if UIApplication.shared.canOpenURL(url) {
-            UIApplication.shared.open(url)
-        }
-    }
-    
-    // MARK: - View Specs Conformance
-    
+}
+
+// MARK: - MovieDetailViewSpecs Conformance
+extension MovieDetailViewController: MovieDetailViewSpecs {
     func displayMovie(title: String, overview: String) {
         titleLabel.text = title
         overviewLabel.text = overview
     }
     
-    // Save the key when displaying
     func displayTrailer(key: String) {
-        self.currentTrailerKey = key
-        // Added /embed/ into the URL path
         guard let url = URL(string: "https://www.youtube-nocookie.com/embed/\(key)?playsinline=1&rel=0") else { return }
-        
         var request = URLRequest(url: url)
         request.setValue("https://www.youtube-nocookie.com", forHTTPHeaderField: "Referer")
-        
         webView.load(request)
-    }
-
-    // Catch if YouTube fails to load or blocks the iframe
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        youtubeFallbackButton.isHidden = false
-    }
-
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        youtubeFallbackButton.isHidden = false
-    }
-
-    @objc private func openYouTubeExternally() {
-        guard let key = currentTrailerKey, let url = URL(string: "https://www.youtube.com/watch?v=\(key)") else { return }
-        if UIApplication.shared.canOpenURL(url) {
-            UIApplication.shared.open(url)
-        }
     }
 
     func displayReviews(_ reviews: [ReviewEntity]) {
         self.reviews = reviews
         reviewsTableView.reloadData()
-        
-        if reviews.isEmpty {
-            let label = UILabel()
-            label.text = "No reviews available."
-            label.textColor = .secondaryLabel
-            label.textAlignment = .center
-            reviewsTableView.backgroundView = label
-        } else {
-            reviewsTableView.backgroundView = nil
-        }
+        reviewsTableView.backgroundView = reviews.isEmpty ? createEmptyReviewLabel() : nil
     }
     
     func showError(_ message: String) {
@@ -187,11 +146,29 @@ final class MovieDetailVC: UIViewController, MovieDetailViewSpecs, WKNavigationD
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
+    
+    private func createEmptyReviewLabel() -> UILabel {
+        let label = UILabel()
+        label.text = "No reviews available."
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+        return label
+    }
+}
+
+// MARK: - WKNavigationDelegate
+extension MovieDetailViewController: WKNavigationDelegate {
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        youtubeFallbackButton.isHidden = false
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        youtubeFallbackButton.isHidden = false
+    }
 }
 
 // MARK: - UITableView DataSource & Delegate
-
-extension MovieDetailVC: UITableViewDataSource, UITableViewDelegate {
+extension MovieDetailViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return reviews.count
     }
@@ -201,7 +178,6 @@ extension MovieDetailVC: UITableViewDataSource, UITableViewDelegate {
         cell.selectionStyle = .none
         let review = reviews[indexPath.row]
         
-        // 1. Bold Author Header
         let authorName = review.author.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalString = NSMutableAttributedString(
             string: "\(authorName)\n\n",
@@ -211,11 +187,8 @@ extension MovieDetailVC: UITableViewDataSource, UITableViewDelegate {
             ]
         )
         
-        // 2. Render Markdown natively
-        let contentString = parseNativeMarkdown(review.content)
-        finalString.append(contentString)
+        finalString.append(parseNativeMarkdown(review.content))
         
-        // 3. Use a UITextView inside cell.contentView to handle interactive links seamlessly without flash
         let textViewTag = 99
         let textView: UITextView
         
@@ -242,24 +215,19 @@ extension MovieDetailVC: UITableViewDataSource, UITableViewDelegate {
         }
         
         textView.attributedText = finalString
-        
         return cell
     }
 
     private func parseNativeMarkdown(_ text: String) -> NSAttributedString {
-        let options = AttributedString.MarkdownParsingOptions(
-            interpretedSyntax: .inlineOnlyPreservingWhitespace
-        )
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         
         if let parsed = try? AttributedString(markdown: text, options: options) {
             let mutableAttrString = NSMutableAttributedString(parsed)
             let fullRange = NSRange(location: 0, length: mutableAttrString.length)
             
-            // Set body color and enforce a clean 15pt system font across everything
             mutableAttrString.addAttribute(.foregroundColor, value: UIColor.secondaryLabel, range: fullRange)
             mutableAttrString.addAttribute(.font, value: UIFont.systemFont(ofSize: 15, weight: .regular), range: fullRange)
             
-            // If markdown has bold tags, ensure those specific ranges stay bold at 15pt
             mutableAttrString.enumerateAttribute(.font, in: fullRange, options: []) { value, range, _ in
                 if let existingFont = value as? UIFont,
                    let descriptor = existingFont.fontDescriptor.withDesign(.default) {
@@ -276,18 +244,10 @@ extension MovieDetailVC: UITableViewDataSource, UITableViewDelegate {
                     }
                 }
             }
-            
             return mutableAttrString
         }
         
-        // Fallback if markdown parsing fails
-        return NSAttributedString(
-            string: text,
-            attributes: [
-                .font: UIFont.systemFont(ofSize: 15, weight: .regular),
-                .foregroundColor: UIColor.secondaryLabel
-            ]
-        )
+        return NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 15, weight: .regular), .foregroundColor: UIColor.secondaryLabel])
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -296,7 +256,7 @@ extension MovieDetailVC: UITableViewDataSource, UITableViewDelegate {
             let contentHeight = scrollView.contentSize.height
             let height = scrollView.frame.size.height
             if offsetY > (contentHeight - height - 100) {
-                (presenter as? MovieDetailPresenter)?.didScrollReviewsToBottom()
+                presenter?.didScrollReviewsToBottom()
             }
         }
     }

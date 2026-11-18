@@ -1,19 +1,22 @@
-import UIKit
+import Foundation
 
-protocol GenreListPresenterSpecs {
+protocol GenreListPresenterSpecs: AnyObject {
     var genresCount: Int { get }
     func viewIsReady()
     func genre(at index: Int) -> GenreEntity
     func didSelectGenre(at index: Int)
 }
 
-final class GenreListPresenter: GenreListPresenterSpecs, GenreListInteractorOutputSpecs {
+final class GenreListPresenter {
     weak var view: GenreListViewSpecs?
     var interactor: GenreListInteractorInputSpecs?
     var router: GenreListRouterSpecs?
     
     private var genres: [GenreEntity] = []
-    
+}
+
+// MARK: - GenreListPresenterSpecs Conformance
+extension GenreListPresenter: GenreListPresenterSpecs {
     var genresCount: Int {
         genres.count
     }
@@ -30,9 +33,10 @@ final class GenreListPresenter: GenreListPresenterSpecs, GenreListInteractorOutp
         let selectedGenre = genres[index]
         router?.navigateToMovieList(genre: selectedGenre)
     }
-    
-    // MARK: - Interactor Output
-    
+}
+
+// MARK: - GenreListInteractorOutputSpecs Conformance
+extension GenreListPresenter: GenreListInteractorOutputSpecs {
     func didFetchGenres(_ genres: [GenreEntity]) {
         self.genres = genres
         view?.reloadData()

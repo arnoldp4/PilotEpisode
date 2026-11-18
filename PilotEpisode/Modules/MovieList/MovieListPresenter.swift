@@ -1,4 +1,6 @@
-protocol MovieListPresenterSpecs {
+import Foundation
+
+protocol MovieListPresenterSpecs: AnyObject {
     var moviesCount: Int { get }
     func viewIsReady()
     func movie(at index: Int) -> MovieEntity
@@ -6,7 +8,7 @@ protocol MovieListPresenterSpecs {
     func didSelectMovie(at index: Int)
 }
 
-class MovieListPresenter: MovieListPresenterSpecs, MovieListInteractorOutputSpecs {
+final class MovieListPresenter {
     weak var view: MovieListViewSpecs?
     var interactor: MovieListInteractorInputSpecs?
     var router: MovieListRouterSpecs?
@@ -21,6 +23,14 @@ class MovieListPresenter: MovieListPresenterSpecs, MovieListInteractorOutputSpec
         self.genreId = genreId
     }
     
+    private func loadMoreMovies() {
+        isLoading = true
+        interactor?.fetchMovies(genreId: genreId, page: currentPage)
+    }
+}
+
+// MARK: - MovieListPresenterSpecs Conformance
+extension MovieListPresenter: MovieListPresenterSpecs {
     var moviesCount: Int {
         movies.count
     }
@@ -38,18 +48,14 @@ class MovieListPresenter: MovieListPresenterSpecs, MovieListInteractorOutputSpec
         loadMoreMovies()
     }
     
-    private func loadMoreMovies() {
-        isLoading = true
-        interactor?.fetchMovies(genreId: genreId, page: currentPage)
-    }
-    
     func didSelectMovie(at index: Int) {
         let movie = movies[index]
         router?.navigateToMovieDetail(movieId: movie.id)
     }
-    
-    // MARK: - Interactor Output
-    
+}
+
+// MARK: - MovieListInteractorOutputSpecs Conformance
+extension MovieListPresenter: MovieListInteractorOutputSpecs {
     func didFetchMovies(_ newMovies: [MovieEntity], totalPages: Int) {
         isLoading = false
         self.totalPages = totalPages
@@ -60,5 +66,6 @@ class MovieListPresenter: MovieListPresenterSpecs, MovieListInteractorOutputSpec
     
     func didFailFetching(error: Error) {
         isLoading = false
+        view?.showError(message: error.localizedDescription)
     }
 }

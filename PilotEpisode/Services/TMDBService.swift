@@ -8,10 +8,8 @@ protocol TMDBServiceProtocol {
     func fetchMovieReviews(movieId: Int, page: Int, completion: @escaping (Result<ReviewResponse, Error>) -> Void)
 }
 
-class TMDBService: TMDBServiceProtocol {
-    static let shared = TMDBService()
+final class TMDBService: TMDBServiceProtocol {
     
-    // Paste your TMDB API Read Access Token (Bearer Token) here
     private let accessToken: String = {
         guard let path = Bundle.main.path(forResource: "Config", ofType: "plist"),
               let dict = NSDictionary(contentsOfFile: path),
@@ -20,9 +18,11 @@ class TMDBService: TMDBServiceProtocol {
         }
         return token
     }()
+    
     private let baseURL = "https://api.themoviedb.org/3"
     
-    private init() {}
+    // Initializer is public so it can be instantiated and injected where needed (No Singleton!)
+    init() {}
     
     private func request<T: Decodable>(endpoint: String, parameters: [String: String] = [:], completion: @escaping (Result<T, Error>) -> Void) {
         var components = URLComponents(string: "\(baseURL)\(endpoint)")!
@@ -60,8 +60,10 @@ class TMDBService: TMDBServiceProtocol {
             }
         }.resume()
     }
-    
-    // 1. Fetch Genres
+}
+
+// MARK: - TMDBServiceProtocol Conformance
+extension TMDBService {
     func fetchGenres(completion: @escaping (Result<[GenreEntity], Error>) -> Void) {
         request(endpoint: "/genre/movie/list") { (result: Result<GenreResponse, Error>) in
             switch result {
@@ -73,21 +75,15 @@ class TMDBService: TMDBServiceProtocol {
         }
     }
     
-    // 2. Discover Movies by Genre (with Pagination)
     func discoverMovies(genreId: Int, page: Int, completion: @escaping (Result<MovieResponse, Error>) -> Void) {
-        let params = [
-            "with_genres": "\(genreId)",
-            "page": "\(page)"
-        ]
+        let params = ["with_genres": "\(genreId)", "page": "\(page)"]
         request(endpoint: "/discover/movie", parameters: params, completion: completion)
     }
     
-    // 3. Fetch Movie Details
     func fetchMovieDetails(movieId: Int, completion: @escaping (Result<MovieDetailEntity, Error>) -> Void) {
         request(endpoint: "/movie/\(movieId)", completion: completion)
     }
     
-    // 4. Fetch Movie Videos (for YouTube Trailer)
     func fetchMovieVideos(movieId: Int, completion: @escaping (Result<[VideoEntity], Error>) -> Void) {
         request(endpoint: "/movie/\(movieId)/videos") { (result: Result<VideoResponse, Error>) in
             switch result {
@@ -99,7 +95,6 @@ class TMDBService: TMDBServiceProtocol {
         }
     }
     
-    // 5. Fetch Movie Reviews (with Pagination)
     func fetchMovieReviews(movieId: Int, page: Int, completion: @escaping (Result<ReviewResponse, Error>) -> Void) {
         let params = ["page": "\(page)"]
         request(endpoint: "/movie/\(movieId)/reviews", parameters: params, completion: completion)

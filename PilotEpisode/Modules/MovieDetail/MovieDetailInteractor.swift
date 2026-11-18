@@ -1,6 +1,6 @@
-import UIKit
+import Foundation
 
-protocol MovieDetailInteractorInputSpecs {
+protocol MovieDetailInteractorInputSpecs: AnyObject {
     func fetchMovieDetails(id: Int)
     func fetchReviews(id: Int, page: Int)
     func fetchVideos(id: Int)
@@ -9,16 +9,16 @@ protocol MovieDetailInteractorInputSpecs {
 protocol MovieDetailInteractorOutputSpecs: AnyObject {
     func didFetchMovie(_ movie: MovieDetailEntity)
     func didFetchReviews(_ newReviews: [ReviewEntity], totalPages: Int)
-    func didFetchTrailerKey(_ key: String) 
+    func didFetchTrailerKey(_ key: String)
     func didFailFetching(error: Error)
 }
 
-class MovieDetailInteractor: MovieDetailInteractorInputSpecs {
+final class MovieDetailInteractor: MovieDetailInteractorInputSpecs {
     weak var output: MovieDetailInteractorOutputSpecs?
     private let tmdbService: TMDBServiceProtocol
         
-    init(service: TMDBServiceProtocol = TMDBService.shared) {
-        self.tmdbService = service
+    init(tmdbService: TMDBServiceProtocol = TMDBService()) {
+        self.tmdbService = tmdbService
     }
     
     func fetchMovieDetails(id: Int) {
@@ -52,13 +52,12 @@ class MovieDetailInteractor: MovieDetailInteractorInputSpecs {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let videos):
-                    // Find first YouTube trailer
                     let trailer = videos.first { $0.site == "YouTube" && $0.type == "Trailer" } ?? videos.first
                     if let key = trailer?.key {
                         self?.output?.didFetchTrailerKey(key)
                     }
                 case .failure:
-                    break // Optional failure handling for trailers
+                    break
                 }
             }
         }

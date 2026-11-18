@@ -5,13 +5,13 @@ protocol MovieListViewSpecs: AnyObject {
     func showError(message: String)
 }
 
-class MovieListVC: UIViewController, MovieListViewSpecs {
+final class MovieListViewController: UIViewController {
     
     var presenter: MovieListPresenterSpecs?
     
-    // MARK: - UI Components
+    // MARK: - Private UI Components
     
-    lazy var collectionView: UICollectionView = {
+    private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.minimumInteritemSpacing = 8
         layout.minimumLineSpacing = 8
@@ -31,9 +31,10 @@ class MovieListVC: UIViewController, MovieListViewSpecs {
         setupView()
         presenter?.viewIsReady()
     }
-    
-    // MARK: - Setup
-    
+}
+
+// MARK: - Setup Views
+extension MovieListViewController {
     private func setupView() {
         view.backgroundColor = .systemBackground
         view.addSubview(collectionView)
@@ -45,12 +46,14 @@ class MovieListVC: UIViewController, MovieListViewSpecs {
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
-    
+}
+
+// MARK: - MovieListViewSpecs Conformance
+extension MovieListViewController: MovieListViewSpecs {
     func reloadData() {
         DispatchQueue.main.async {
             self.collectionView.reloadData()
             
-            // Quick empty state check
             if self.presenter?.moviesCount == 0 {
                 let label = UILabel()
                 label.text = "No movies found."
@@ -70,24 +73,25 @@ class MovieListVC: UIViewController, MovieListViewSpecs {
             self.present(alert, animated: true)
         }
     }
-    
+}
+
+// MARK: - UIScrollViewDelegate (Endless Scroll)
+extension MovieListViewController {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let offsetY = scrollView.contentOffset.y
         let contentHeight = scrollView.contentSize.height
         let height = scrollView.frame.size.height
         
-        // Trigger only when within 200 points of the bottom
         if offsetY > (contentHeight - height - 200) {
             presenter?.didScrollToBottom()
         }
     }
 }
 
-// MARK: - UICollectionView DataSource, Delegate & Endless Scroll Trigger
-
-extension MovieListVC: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+// MARK: - UICollectionView DataSource, Delegate & FlowLayout
+extension MovieListViewController: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        presenter?.moviesCount ?? 0
+        return presenter?.moviesCount ?? 0
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -96,7 +100,6 @@ extension MovieListVC: UICollectionViewDataSource, UICollectionViewDelegateFlowL
         
         let movie = presenter?.movie(at: indexPath.item)
         
-        // Quick programmatic image view setup if using default cell
         let imageViewTag = 99
         let imageView: UIImageView
         if let existing = cell.contentView.viewWithTag(imageViewTag) as? UIImageView {
@@ -120,11 +123,9 @@ extension MovieListVC: UICollectionViewDataSource, UICollectionViewDelegateFlowL
         if let posterPath = movie?.posterPath {
             let urlString = "https://image.tmdb.org/t/p/w500\(posterPath)"
             if let url = URL(string: urlString) {
-                // Basic background data task for speed
                 DispatchQueue.global().async {
                     if let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
                         DispatchQueue.main.async {
-                            // Ensure cell hasn't been reused for another movie
                             imageView.image = image
                         }
                     }
@@ -140,7 +141,7 @@ extension MovieListVC: UICollectionViewDataSource, UICollectionViewDelegateFlowL
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        let width = (view.frame.width - 24) / 2 // 2 columns
+        let width = (view.frame.width - 24) / 2
         return CGSize(width: width, height: width * 1.5)
     }
 }

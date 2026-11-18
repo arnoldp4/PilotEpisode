@@ -1,6 +1,6 @@
-import UIKit
+import Foundation
 
-protocol MovieListInteractorInputSpecs {
+protocol MovieListInteractorInputSpecs: AnyObject {
     func fetchMovies(genreId: Int, page: Int)
 }
 
@@ -9,14 +9,17 @@ protocol MovieListInteractorOutputSpecs: AnyObject {
     func didFailFetching(error: Error)
 }
 
-class MovieListInteractor: MovieListInteractorInputSpecs {
+final class MovieListInteractor: MovieListInteractorInputSpecs {
     weak var output: MovieListInteractorOutputSpecs?
     private let tmdbService: TMDBServiceProtocol
         
-    init(service: TMDBServiceProtocol = TMDBService.shared) {
-        self.tmdbService = service
+    init(tmdbService: TMDBServiceProtocol = TMDBService()) {
+        self.tmdbService = tmdbService
     }
-    
+}
+
+// MARK: - MovieListInteractorInputSpecs Conformance
+extension MovieListInteractor {
     func fetchMovies(genreId: Int, page: Int) {
         tmdbService.discoverMovies(genreId: genreId, page: page) { [weak self] result in
             DispatchQueue.main.async {

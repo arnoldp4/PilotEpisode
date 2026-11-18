@@ -13,8 +13,8 @@ final class GenreListInteractor: GenreListInteractorInputSpecs {
     weak var output: GenreListInteractorOutputSpecs?
     private let tmdbService: TMDBServiceProtocol
         
-    init(service: TMDBServiceProtocol = TMDBService.shared) {
-        self.tmdbService = service
+    init(tmdbService: TMDBServiceProtocol = TMDBService()) {
+        self.tmdbService = tmdbService
     }
     
     func fetchGenres() {

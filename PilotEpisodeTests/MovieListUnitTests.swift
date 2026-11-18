@@ -24,8 +24,10 @@ final class MockMovieListView: MovieListViewSpecs {
 final class MockMovieListInteractor: MovieListInteractorInputSpecs {
     weak var output: MovieListInteractorOutputSpecs?
     var shouldFail = false
+    var fetchMoviesCallCount = 0
     
     func fetchMovies(genreId: Int, page: Int) {
+        fetchMoviesCallCount += 1
         if shouldFail {
             output?.didFailFetching(error: NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch movies"]))
         } else {
@@ -33,7 +35,8 @@ final class MockMovieListInteractor: MovieListInteractorInputSpecs {
                 MovieEntity(id: 101, title: "Action Movie 1", overview: "Overview 1", posterPath: nil),
                 MovieEntity(id: 102, title: "Action Movie 2", overview: "Overview 2", posterPath: nil)
             ]
-            output?.didFetchMovies(mockMovies, totalPages: 2)
+            
+            output?.didFetchMovies(mockMovies, totalPages: 3)
         }
     }
 }
@@ -94,5 +97,20 @@ final class MovieListUnitTests: XCTestCase {
         presenter.viewIsReady()
         
         XCTAssertFalse(mockView.isReloadDataCalled)
+    }
+    
+    func testInit_DoesNotTriggerAnyCalls() {
+        XCTAssertEqual(mockInteractor?.fetchMoviesCallCount, 0, "SUT should not make any calls upon initialization")
+    }
+
+    func testDidScrollToBottom_TriggersSecondFetch() {
+        guard let mockInteractor = mockInteractor,
+              let presenter = presenter else { return }
+        
+        presenter.viewIsReady() // First fetch (page 1)
+        XCTAssertEqual(mockInteractor.fetchMoviesCallCount, 1)
+        
+        presenter.didScrollToBottom() // Second fetch (page 2)
+        XCTAssertEqual(mockInteractor.fetchMoviesCallCount, 2, "Pagination should trigger a subsequent call to the interactor")
     }
 }

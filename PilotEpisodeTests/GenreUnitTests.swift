@@ -24,8 +24,10 @@ final class MockGenreListView: GenreListViewSpecs {
 final class MockGenreListInteractor: GenreListInteractorInputSpecs {
     weak var output: GenreListInteractorOutputSpecs?
     var shouldFail = false
+    var fetchGenresCallCount = 0
     
     func fetchGenres() {
+        fetchGenresCallCount += 1
         if shouldFail {
             output?.didFailFetching(error: NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch genres"]))
         } else {
@@ -103,5 +105,9 @@ final class GenreListUnitTests: XCTestCase {
         
         XCTAssertNotNil(mockView.errorMessage)
         XCTAssertEqual(mockView.errorMessage, "Failed to fetch genres")
+    }
+    
+    func testInit_DoesNotTriggerAnyCalls() {
+        XCTAssertEqual(mockInteractor?.fetchGenresCallCount, 0, "Interactor should do nothing upon init before viewIsReady")
     }
 }
