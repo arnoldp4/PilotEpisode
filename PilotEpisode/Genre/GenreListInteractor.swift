@@ -1,3 +1,5 @@
+import UIKit
+
 protocol GenreListInteractorInputSpecs {
     func fetchGenres()
 }
@@ -9,9 +11,14 @@ protocol GenreListInteractorOutputSpecs: AnyObject {
 
 final class GenreListInteractor: GenreListInteractorInputSpecs {
     weak var output: GenreListInteractorOutputSpecs?
+    private let tmdbService: TMDBServiceProtocol
+        
+    init(service: TMDBServiceProtocol = TMDBService.shared) {
+        self.tmdbService = service
+    }
     
     func fetchGenres() {
-        TMDBService.shared.fetchGenres { [weak self] result in
+        tmdbService.fetchGenres { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let genres):

@@ -1,3 +1,5 @@
+import UIKit
+
 protocol MovieListInteractorInputSpecs {
     func fetchMovies(genreId: Int, page: Int)
 }
@@ -9,9 +11,14 @@ protocol MovieListInteractorOutputSpecs: AnyObject {
 
 class MovieListInteractor: MovieListInteractorInputSpecs {
     weak var output: MovieListInteractorOutputSpecs?
+    private let tmdbService: TMDBServiceProtocol
+        
+    init(service: TMDBServiceProtocol = TMDBService.shared) {
+        self.tmdbService = service
+    }
     
     func fetchMovies(genreId: Int, page: Int) {
-        TMDBService.shared.discoverMovies(genreId: genreId, page: page) { [weak self] result in
+        tmdbService.discoverMovies(genreId: genreId, page: page) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let response):

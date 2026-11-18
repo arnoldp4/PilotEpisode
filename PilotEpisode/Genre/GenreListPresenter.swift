@@ -1,3 +1,5 @@
+import UIKit
+
 protocol GenreListPresenterSpecs {
     var genresCount: Int { get }
     func viewIsReady()

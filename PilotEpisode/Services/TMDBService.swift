@@ -1,10 +1,25 @@
 import Foundation
 
-class TMDBService {
+protocol TMDBServiceProtocol {
+    func fetchGenres(completion: @escaping (Result<[GenreEntity], Error>) -> Void)
+    func discoverMovies(genreId: Int, page: Int, completion: @escaping (Result<MovieResponse, Error>) -> Void)
+    func fetchMovieDetails(movieId: Int, completion: @escaping (Result<MovieDetailEntity, Error>) -> Void)
+    func fetchMovieVideos(movieId: Int, completion: @escaping (Result<[VideoEntity], Error>) -> Void)
+    func fetchMovieReviews(movieId: Int, page: Int, completion: @escaping (Result<ReviewResponse, Error>) -> Void)
+}
+
+class TMDBService: TMDBServiceProtocol {
     static let shared = TMDBService()
     
     // Paste your TMDB API Read Access Token (Bearer Token) here
-    private let accessToken = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkNTBmMGE3ZmNjOTEyYjBlM2NkNjZmNTg5M2FhYjBmNyIsIm5iZiI6MTc5NDkyMzkwMS42OCwic3ViIjoiNmFmYzVkN2Q5MmM1MTZhMjk4NTlmZjAzIiwic2NvcGVzIjpbImFwaV9yZWFkIl0sInZlcnNpb24iOjF9.t1QEQh-DVthKOn_Ekxyb0-Ayj_EyV8b-tWlzTf1wBgs"
+    private let accessToken: String = {
+        guard let path = Bundle.main.path(forResource: "Config", ofType: "plist"),
+              let dict = NSDictionary(contentsOfFile: path),
+              let token = dict["TMDB_ACCESS_TOKEN"] as? String else {
+            fatalError("Config.plist or TMDB_ACCESS_TOKEN is missing!")
+        }
+        return token
+    }()
     private let baseURL = "https://api.themoviedb.org/3"
     
     private init() {}
@@ -70,5 +85,23 @@ class TMDBService {
     // 3. Fetch Movie Details
     func fetchMovieDetails(movieId: Int, completion: @escaping (Result<MovieDetailEntity, Error>) -> Void) {
         request(endpoint: "/movie/\(movieId)", completion: completion)
+    }
+    
+    // 4. Fetch Movie Videos (for YouTube Trailer)
+    func fetchMovieVideos(movieId: Int, completion: @escaping (Result<[VideoEntity], Error>) -> Void) {
+        request(endpoint: "/movie/\(movieId)/videos") { (result: Result<VideoResponse, Error>) in
+            switch result {
+            case .success(let response):
+                completion(.success(response.results))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    // 5. Fetch Movie Reviews (with Pagination)
+    func fetchMovieReviews(movieId: Int, page: Int, completion: @escaping (Result<ReviewResponse, Error>) -> Void) {
+        let params = ["page": "\(page)"]
+        request(endpoint: "/movie/\(movieId)/reviews", parameters: params, completion: completion)
     }
 }
